@@ -17,7 +17,6 @@ async function checkClosedWonDeals() {
   try {
     console.log('Checking Closed Won deals...');
 
-    // Tüm deals'i getir, sonra filtrele
     const dealsRes = await axios.get(
       `https://api.hubapi.com/crm/v3/objects/deals?properties=dealstage,dealname&limit=100`,
       { headers }
@@ -25,40 +24,42 @@ async function checkClosedWonDeals() {
 
     const allDeals = dealsRes.data.results;
     const closedWonDeals = allDeals.filter(d => d.properties.dealstage === CLOSED_WON_STAGE_ID);
-    
+
     console.log(`Total deals: ${allDeals.length}, Closed Won: ${closedWonDeals.length}`);
 
     for (const deal of closedWonDeals) {
       const dealId = deal.id;
 
-      // Deal'e bağlı Contact'ı bul
+      // Deal-Contact association'larını label'larıyla birlikte getir
       const assocRes = await axios.get(
-        `https://api.hubapi.com/crm/v3/objects/deals/${dealId}/associations/contacts`,
+        `https://api.hubapi.com/crm/v4/objects/deals/${dealId}/associations/contacts`,
         { headers }
       );
 
-      const contacts = assocRes.data.results;
-      if (!contacts || contacts.length === 0) {
+      const associations = assocRes.data.results;
+
+      if (!associations || associations.length === 0) {
         console.log(`Deal ${dealId} - No contact found, reverting...`);
         await revertStage(dealId);
         continue;
       }
 
-      const contactId = contacts[0].id;
+      // Bill To ve Ship To label'larını kontrol et
+      let hasBillTo = false;
+      let hasShipTo = false;
 
-      // Contact'taki Bill To ve Ship To kontrol et
-      const contactRes = await axios.get(
-        `https://api.hubapi.com/crm/v3/objects/contacts/${contactId}?properties=bill_to,ship_to`,
-        { headers }
-      );
+      for (const assoc of associations) {
+        const labels = assoc.associationTypes?.map(t => t.label) || [];
+        console.log(`Deal ${dealId} - Contact ${assoc.toObjectId} labels: ${labels.join(', ')}`);
+        if (labels.includes('Bill To')) hasBillTo = true;
+        if (labels.includes('Ship To')) hasShipTo = true;
+      }
 
-      const { bill_to, ship_to } = contactRes.data.properties;
-
-      if (!bill_to || !ship_to) {
-        console.log(`Deal ${dealId} - Bill To or Ship To missing, reverting...`);
+      if (!hasBillTo || !hasShipTo) {
+        console.log(`Deal ${dealId} - Bill To: ${hasBillTo}, Ship To: ${hasShipTo} - reverting...`);
         await revertStage(dealId);
       } else {
-        console.log(`Deal ${dealId} - OK`);
+        console.log(`Deal ${dealId} - OK, both labels present`);
       }
     }
   } catch (err) {
@@ -75,13 +76,9 @@ async function revertStage(dealId) {
   console.log(`Deal ${dealId} reverted to previous stage`);
 }
 
-// Her 5 dakikada bir kontrol et
 setInterval(checkClosedWonDeals, 5 * 60 * 1000);
-
-// Başlangıçta da çalıştır
 checkClosedWonDeals();
 
-// Health check endpoint
 app.get('/', (req, res) => res.send('Running'));
 
 const PORT = process.env.PORT || 3000;
