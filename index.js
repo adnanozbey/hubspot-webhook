@@ -2,7 +2,7 @@ const express = require('express');
 const axios = require('axios');
 const app = express();
 
-const PRIVATE_APP_TOKEN = 'pat-na1-ca06f4bd-977d-4704-a166-cbdcb286583e';
+const PRIVATE_APP_TOKEN = process.env.HUBSPOT_API_KEY;
 
 app.get('/', (req, res) => {
   res.send('HubSpot Webhook Server running.');
