@@ -81,5 +81,28 @@ checkClosedWonDeals();
 
 app.get('/', (req, res) => res.send('Running'));
 
+app.get('/check/:dealId', async (req, res) => {
+  const dealId = req.params.dealId;
+  try {
+    const assocRes = await axios.get(
+      `https://api.hubapi.com/crm/v4/objects/deals/${dealId}/associations/contacts`,
+      { headers }
+    );
+    const associations = assocRes.data.results;
+    let hasBillTo = false;
+    let hasShipTo = false;
+    for (const assoc of associations) {
+      const labels = assoc.associationTypes?.map(t => t.label) || [];
+      if (labels.includes('Bill To')) hasBillTo = true;
+      if (labels.includes('Ship To')) hasShipTo = true;
+    }
+    const missing = [];
+    if (!hasBillTo) missing.push('Bill To');
+    if (!hasShipTo) missing.push('Ship To');
+    res.json({ missing });
+  } catch (err) {
+    res.json({ missing: [] });
+  }
+});
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
