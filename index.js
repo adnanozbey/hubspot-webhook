@@ -17,27 +17,18 @@ async function checkClosedWonDeals() {
   try {
     console.log('Checking Closed Won deals...');
 
-    // Closed Won deallerini getir
-    const dealsRes = await axios.post(
-      'https://api.hubapi.com/crm/v3/objects/deals/search',
-      {
-        filterGroups: [{
-          filters: [{
-            propertyName: 'dealstage',
-            operator: 'EQ',
-            value: CLOSED_WON_STAGE_ID
-          }]
-        }],
-        properties: ['dealname', 'dealstage'],
-        limit: 100
-      },
+    // Tüm deals'i getir, sonra filtrele
+    const dealsRes = await axios.get(
+      `https://api.hubapi.com/crm/v3/objects/deals?properties=dealstage,dealname&limit=100`,
       { headers }
     );
 
-    const deals = dealsRes.data.results;
-    console.log(`Found ${deals.length} Closed Won deals`);
+    const allDeals = dealsRes.data.results;
+    const closedWonDeals = allDeals.filter(d => d.properties.dealstage === CLOSED_WON_STAGE_ID);
+    
+    console.log(`Total deals: ${allDeals.length}, Closed Won: ${closedWonDeals.length}`);
 
-    for (const deal of deals) {
+    for (const deal of closedWonDeals) {
       const dealId = deal.id;
 
       // Deal'e bağlı Contact'ı bul
