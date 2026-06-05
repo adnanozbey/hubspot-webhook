@@ -16,7 +16,7 @@ app.get('/check/:dealId', async (req, res) => {
       axios.get(`https://api.hubapi.com/crm/v3/objects/deals/${dealId}?properties=dealstage`, {
         headers: { Authorization: `Bearer ${PRIVATE_APP_TOKEN}` }
       }),
-      axios.get(`https://api.hubapi.com/crm/v4/objects/deals/${dealId}/associations/companies`, {
+      axios.get(`https://api.hubapi.com/crm/v4/objects/deals/${dealId}/associations/contacts`, {
         headers: { Authorization: `Bearer ${PRIVATE_APP_TOKEN}` }
       })
     ]);
